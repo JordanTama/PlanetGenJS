@@ -56,35 +56,45 @@ camera.add(cameralight);
 scene.add(camera);
 
 //create the material of the cube (basic material)
-var material_cube = new THREE.MeshStandardMaterial();
+var terrain_mat = new THREE.MeshStandardMaterial();
 //set the color of the cube
-material_cube.color=  new THREE.Color(0,1,0);
-material_cube.roughness=.8;
-
+terrain_mat.color=  new THREE.Color(.25,.7,.25);
+terrain_mat.roughness=.8;
 //then set the renderer to wireframe
-material_cube.wireframe=false;
+terrain_mat.wireframe=false;
+
+//create the material of the cube (basic material)
+var water_mat = new THREE.MeshStandardMaterial();
+//set the color of the cube
+water_mat.color=  new THREE.Color(.25,.25,1);
+water_mat.roughness=.2;
+//then set the renderer to wireframe
+water_mat.wireframe=false;
 
 //Create the base terrain
-var sphere_geometry = new THREE.SphereGeometry(5, 40, 20);
+var planet_geometry = new THREE.IcosahedronGeometry(5, 2);
+var water_geometry = new THREE.IcosahedronGeometry(5, 2);
 
 //Create the noise, then loop through all the vertices
 var simplex = new SimplexNoise();
-for (var i = 0; i < sphere_geometry.vertices.length; i++)
+for (var i = 0; i < planet_geometry.vertices.length; i++)
 {
-    var vert_pos_x = sphere_geometry.vertices[i].x;
-    var vert_pos_y = sphere_geometry.vertices[i].y;
-    var vert_pos_z = sphere_geometry.vertices[i].z;
+    var vert_pos_x = planet_geometry.vertices[i].x;
+    var vert_pos_y = planet_geometry.vertices[i].y;
+    var vert_pos_z = planet_geometry.vertices[i].z;
     var dir = new THREE.Vector3(0,0,0);
 
     //Get the direction of the vertex
     dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
     
     var vert_noise = simplex.noise2D(vert_pos_x, vert_pos_y, vert_pos_z);
-    sphere_geometry.vertices[i].addScaledVector(dir, vert_noise * 0.1);
+    planet_geometry.vertices[i].addScaledVector(dir, vert_noise * 0.15);
 }
 
-var sphere = new THREE.Mesh(sphere_geometry, material_cube);
-scene.add(sphere);
+var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);
+var water = new THREE.Mesh(water_geometry, water_mat);
+scene.add(planet_terrain);
+scene.add(water);
 
 function animate(){
     requestAnimationFrame(animate);
