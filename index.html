@@ -88,7 +88,7 @@ for (var i = 0; i < planet_geometry.vertices.length; i++)
     dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
     
     var vert_noise = simplex.noise2D(vert_pos_x, vert_pos_y, vert_pos_z);
-    planet_geometry.vertices[i].addScaledVector(dir, vert_noise * 0.15);
+    planet_geometry.vertices[i].addScaledVector(dir, vert_noise * 0.1);
 }
 
 var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);
