@@ -61,19 +61,27 @@ var terrain_mat = new THREE.MeshStandardMaterial();
 terrain_mat.color=  new THREE.Color(.25,.7,.25);
 terrain_mat.roughness=.8;
 //then set the renderer to wireframe
-terrain_mat.wireframe=true;
+terrain_mat.wireframe=false;
+terrain_mat.flatShading = true;
 
 //create the material of the cube (basic material)
 var water_mat = new THREE.MeshStandardMaterial();
 //set the color of the cube
 water_mat.color=  new THREE.Color(.25,.25,1);
-water_mat.roughness=.2;
+water_mat.roughness=.6;
 //then set the renderer to wireframe
 water_mat.wireframe=false;
+water_mat.flatShading = true;
 
 //Create the base terrain
-var planet_geometry = new THREE.IcosahedronGeometry(5, 5);
-var water_geometry = new THREE.IcosahedronGeometry(5, 2);
+var planet_geometry = new THREE.IcosahedronGeometry(2, 3);
+var water_geometry = new THREE.IcosahedronGeometry(2, 3);
+
+
+var highest_point = 0;
+var lowest_point = 0;
+var high_color = new THREE.Color(1,1,1);
+var low_color = new THREE.Color(0,0.8,0);
 
 //Create the noise, then loop through all the vertices
 var simplex = new SimplexNoise();
@@ -86,9 +94,23 @@ for (var i = 0; i < planet_geometry.vertices.length; i++)
 
     //Get the direction of the vertex
     dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
-    
-    var vert_noise = simplex.noise2D(vert_pos_x, vert_pos_y, vert_pos_z);
-    planet_geometry.vertices[i].addScaledVector(dir, vert_noise * 0.1);
+
+    var vert_noise = simplex.noise3D(vert_pos_x, vert_pos_y, vert_pos_z);
+	
+	if(vert_noise > highest_point){
+		highest_point = vert_noise;
+	}
+	
+	if(vert_noise < lowest_point){
+		lowest_point = vert_noise;
+	}
+	planet_geometry.colors[i] = new THREE.Color().lerp(high_color, vert_noise);
+	if(vert_noise > .8){
+	    console.log(vert_noise);
+		planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.15);
+	} else {
+		planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.1);
+	}
 }
 
 var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);
@@ -101,6 +123,7 @@ function animate(){
     
     control.update();
     renderer.render(scene, camera);
+	
 }
 
 requestAnimationFrame(animate);
