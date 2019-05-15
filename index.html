@@ -31,6 +31,10 @@
             }
         </style>
 
+		<div id="vertexShader">
+
+		</div>
+		
         <script>
 var scene = new THREE.Scene();
 var ratio = window.innerWidth/window.innerHeight;
@@ -55,68 +59,83 @@ cameralight.castShadow=true;
 camera.add(cameralight);
 scene.add(camera);
 
-//create the material of the cube (basic material)
-var terrain_mat = new THREE.MeshStandardMaterial();
-//set the color of the cube
-terrain_mat.color=  new THREE.Color(.25,.7,.25);
-terrain_mat.roughness=.8;
-//then set the renderer to wireframe
-terrain_mat.wireframe=false;
-terrain_mat.flatShading = true;
+// THIS IS THAT PART YOU SHOULD COPY
+function generatePlanet(terrainColor){
+	var terrain_mat = new THREE.MeshStandardMaterial();
 
-//create the material of the cube (basic material)
-var water_mat = new THREE.MeshStandardMaterial();
-//set the color of the cube
-water_mat.color=  new THREE.Color(.25,.25,1);
-water_mat.roughness=.6;
-//then set the renderer to wireframe
-water_mat.wireframe=false;
-water_mat.flatShading = true;
+	terrain_mat.color = terrainColor;
+	terrain_mat.roughness=.8;
 
-//Create the base terrain
-var planet_geometry = new THREE.IcosahedronGeometry(2, 3);
-var water_geometry = new THREE.IcosahedronGeometry(2, 3);
-
-
-var highest_point = 0;
-var lowest_point = 0;
-var high_color = new THREE.Color(1,1,1);
-var low_color = new THREE.Color(0,0.8,0);
-
-//Create the noise, then loop through all the vertices
-var simplex = new SimplexNoise();
-for (var i = 0; i < planet_geometry.vertices.length; i++)
-{
-    var vert_pos_x = planet_geometry.vertices[i].x;
-    var vert_pos_y = planet_geometry.vertices[i].y;
-    var vert_pos_z = planet_geometry.vertices[i].z;
-    var dir = new THREE.Vector3(0,0,0);
-
-    //Get the direction of the vertex
-    dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
-
-    var vert_noise = simplex.noise3D(vert_pos_x, vert_pos_y, vert_pos_z);
+	terrain_mat.wireframe=false;
+	terrain_mat.flatShading = true;
 	
-	if(vert_noise > highest_point){
-		highest_point = vert_noise;
+	var water_mat = new THREE.MeshStandardMaterial();
+	water_mat.color=  new THREE.Color(.25,.25,1);
+	water_mat.roughness=.6;
+	water_mat.wireframe=false;
+	water_mat.flatShading = true;
+
+	//Create the base terrain
+	var planet_geometry = new THREE.IcosahedronGeometry(1, 3);
+	var water_geometry = new THREE.IcosahedronGeometry(1, 3);
+
+
+	var highest_point = 0;
+	var lowest_point = 0;
+	var high_color = new THREE.Color(1,1,1);
+	var low_color = new THREE.Color(0,0.8,0);
+
+	//Create the noise, then loop through all the vertices
+	var simplex = new SimplexNoise();
+	for (var i = 0; i < planet_geometry.vertices.length; i++)
+	{
+		var vert_pos_x = planet_geometry.vertices[i].x;
+		var vert_pos_y = planet_geometry.vertices[i].y;
+		var vert_pos_z = planet_geometry.vertices[i].z;
+		var dir = new THREE.Vector3(0,0,0);
+
+		//Get the direction of the vertex
+		dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
+
+		var vert_noise = simplex.noise3D(vert_pos_x, vert_pos_y, vert_pos_z);
+		
+		if(vert_noise > highest_point){
+			highest_point = vert_noise;
+		}
+		
+		if(vert_noise < lowest_point){
+			lowest_point = vert_noise;
+		}
+		planet_geometry.colors[i] = new THREE.Color().lerp(high_color, vert_noise);
+		if(vert_noise > .8){
+			console.log(vert_noise);
+			planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.15);
+		} else {
+			planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.1);
+		}
 	}
-	
-	if(vert_noise < lowest_point){
-		lowest_point = vert_noise;
-	}
-	planet_geometry.colors[i] = new THREE.Color().lerp(high_color, vert_noise);
-	if(vert_noise > .8){
-	    console.log(vert_noise);
-		planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.15);
-	} else {
-		planet_geometry.vertices[i].addScaledVector(dir, vert_noise * -0.1);
+
+	var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);	
+	var water = new THREE.Mesh(water_geometry, water_mat);
+
+	var arr = [planet_terrain, water];
+	return arr;
+}
+// Generate planet returns 2 objects (at the moment)
+// 0 = terrain
+// 1 = water
+
+
+var planet = generatePlanet(new THREE.Color(.2,1,.2));
+
+for(i = 0; i < planet.length; i++){
+	scene.add(planet[i]);
+	if (i > 0){
+		planet[i].parent = planet[0];
 	}
 }
 
-var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);
-var water = new THREE.Mesh(water_geometry, water_mat);
-scene.add(planet_terrain);
-scene.add(water);
+planet[0].scale.set = THREE.Vector3(5,5,5,);
 
 function animate(){
     requestAnimationFrame(animate);
