@@ -31,22 +31,6 @@
         }
     </style>
 
-    <script type="x-shader/x-vertex" id="vertexShaderDiffuseLight">
-        varying vec3 vColor;
-
-        void main()
-        {
-        vec3 light = vec3( 0.5, 0.2, 1.0 );
-        light = normalize( light );
-        vec3 ViewNormal= normalize(normalMatrix * normal);
-        float dProd = dot( ViewNormal, light );
-        dProd=clamp(dProd,0.0,1.0);
-        vColor =  vec3( dProd );
-        vec4 ViewPosition= modelViewMatrix * vec4(position,1.0);
-        gl_Position=projectionMatrix * ViewPosition;
-        }
-    </script>
-
     <script type="x-shader/x-vertex" id="vertexShaderSpecularLight">
         vec3 mod289(vec3 x)
         {
@@ -215,7 +199,9 @@
         varying vec2 vUv;
         varying float noise;
         uniform float time;
+        uniform vec3 lightPosition;
         varying vec3 vColor;
+        varying vec3 vViewPosition;
 
         float turbulence( vec3 p ) {
             float w = 100.0;
@@ -232,7 +218,7 @@
         {
             vUv = uv;
             
-            noise = 0.01 * -.10 * turbulence(normal + time);
+            noise = 0.05 * -.10 * turbulence(normal + time);
 
             float b = 0.0 * pnoise(0.01 * position, vec3(1.0));
             float displacement = - 1. * noise + b;
@@ -240,19 +226,41 @@
 
             gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1 );
 
+            vec3 ViewNormal= normalize(normalMatrix * normal);
+            
+            float diffuseComp = dot( ViewNormal, lightPosition );
+            diffuseComp=clamp(diffuseComp,0.0,1.0);
+
+            vec3 ViewDir= vec3(0.0,0.0,15.0);
+            vec3 halfWayVect=normalize(ViewDir+lightPosition);
+            float specularComp = dot( halfWayVect, ViewNormal );
+            specularComp=clamp(specularComp,0.0,1.0);
+            specularComp=pow(specularComp,50.0);
+
+            const vec3 diffuseCol=vec3(0.2,0.2,1.0);
+            const vec3 specularCol=vec3(1.0);
+            vColor = diffuseComp * diffuseCol + specularComp*specularCol;
+
+            vec4 mvPosition = modelViewMatrix * modelViewMatrix * vec4( newPosition, 1 );
+            vViewPosition = - mvPosition.xyz; // vector from vertex to camera
+            
         }
     </script>
 
     <script type="x-shader/x-fragment" id="fragmentInterpColor">
+        #extension GL_OES_standard_derivatives : enable
         varying vec2 vUv;
         varying float noise;
         uniform float time;
+        uniform vec3 lightPosition;
         varying vec3 vColor;
-
+        varying vec3 vViewPosition;
+        
         void main()
         {
-            vec3 color = vec3(0.2,0.2,1.0);
-            gl_FragColor = vec4( color.rgb, 1.0 );
+            vec3 flatColor = normalize( cross( dFdx( vViewPosition ), dFdy( vViewPosition ) ) );
+            flatColor = vColor * flatColor;
+            gl_FragColor = vec4( flatColor, 1.0 );
         }
     </script>
 		
@@ -270,6 +278,7 @@
 
     var renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.context.getExtension('OES_standard_derivatives');
 
     document.body.appendChild(renderer.domElement);
 
@@ -298,7 +307,11 @@
                 time:{
                     type: "f",
                     value: 0.0
-                }
+                },
+                lightPosition: {
+                    type: 'vec3',
+                    value: new THREE.Vector3(0.0, 0.0, 0.0)
+                },
             } 
         });
         // var water_noise_texture = new THREE.TextureLoader().load('noise.png');
@@ -383,6 +396,7 @@
         for(i = 0; i < water_materials.length; i++){
             // water_materials[i].displacementMap.offset = new THREE.Vector2(1+1,0);
             water_materials[i].uniforms[ 'time' ].value = .00025 * (Date.now() - start) * 0.5;
+            water_materials[i].uniforms[ 'lightPosition' ].value = new THREE.Vector3(0,0,15);
         }
     }
 
