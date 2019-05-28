@@ -31,7 +31,7 @@
         }
     </style>
 
-    <script type="x-shader/x-vertex" id="vertexShaderSpecularLight">
+    <script type="x-shader/x-vertex" id="vertexShader">
         vec3 mod289(vec3 x)
         {
         return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -129,12 +129,17 @@
         varying vec2 vUv;
         varying float noise;
         uniform float time;
-        uniform vec3 lightPosition;
         varying vec3 vViewPosition;
-		
-		varying vec3 N;
-		varying vec3 v;
-		varying vNormal;
+
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
+
+        uniform vec3 lightDirection;
+
+        varying vec3 vPos;
+        varying vec3 vNormal;
+        varying vec3 lightDirectionView;
 
         float turbulence( vec3 p ) {
             float w = 100.0;
@@ -151,49 +156,54 @@
         {
             vUv = uv;
             
-            noise = 0.05 * -.10 * turbulence(normal + time);
+            noise = 0.05 * -.10 * turbulence(.5 * normal + time);
 
             float b = 0.0 * pnoise(0.01 * position, vec3(1.0));
             float displacement = - 1. * noise + b;
             vec3 newPosition = position + normal * displacement;
-			
-			// set the vertex to the position of the noise
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1 );
-            
-			//vec4 mvPosition = modelViewMatrix * modelViewMatrix * vec4( newPosition, 1 );
-            //vViewPosition = - mvPosition.xyz; // vector from vertex to camera
-			
-            vNormal= normalize(normalMatrix * normal);
-			v = vec3(vec3(modelViewMatrix) * vec3(position));
-			N = normalize(normalMatrix * normal);
+
+            // set the vertex to the position of the noise
+            vNormal = normal;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+
+            vec3 displacedNormal = 
+            vNormal = normalMatrix * displacedNormal;
         }
     </script>
 
-    <script type="x-shader/x-fragment" id="fragmentInterpColor">
+    <script type="x-shader/x-fragment" id="fragmentShader">
         #extension GL_OES_standard_derivatives : enable
+
+        uniform float shininess;
+        uniform float ambientLight;
+
         varying vec2 vUv;
         varying float noise;
         uniform float time;
         uniform vec3 lightPosition;
-        varying vec3 vViewPosition;
 				
-		varying vec3 N;
-		varying vec3 v;
-		varying vNormal;
+        varying vec3 vPos;
+        varying vec3 vNormal;
+        varying vec3 lightDirectionView;
 		
         void main()
-        {          
-			const vec3 Viewlight = vec3( 0.5, 0.2, 1.0 );
-		
-			vec3 L = normalize(lightPosition - v);
-			vec3 E = normalize(-v);
-			vec3 R = normalize(-reflect(L,N));
-			
-			vec4 Iamb = vec3(0.5, 0.5, 0.5);
-			
-			vec4 Idiff = 
-			
-			gl_FragColor = vec4(vec3(0.2,0.2,1.0),1.0);
+        {   
+            vec3 color = vec3(0.2,1,0.2);     
+            vec3  N         = normalize( vNormal );
+            vec3  L         = normalize( -lightDirectionView );
+            vec3  V         = normalize( -vPos );
+            vec3  H         = normalize( V + L );
+        
+            float NdotL     = dot(N, L);
+            float NdotH     = dot(N, H);
+        
+            float kDiffuse  = max(0.0, NdotL);
+            // float kSpecular = (shininess + 2.0) * pow(max(0.0, NdotH), shininess) / (2.0 * 3.14159265);
+            float kSpecular = pow(max(0.0, NdotH), shininess);
+        
+            vec3 light_col  = color * (kDiffuse + kSpecular);
+            gl_FragColor    = vec4(light_col, 1.0);
+
         }
     </script>
 		
@@ -203,7 +213,7 @@
 
     var camera = new THREE.PerspectiveCamera(70, ratio, 0.1, 1000);
     var control = new THREE.OrbitControls(camera);
-    var start = Date.now();
+    var time;
 
     camera.position.set(0,0,15);
     camera.lookAt(0,0,0);
@@ -215,60 +225,70 @@
 
     document.body.appendChild(renderer.domElement);
 
-    var ambientlight = new THREE.AmbientLight(new THREE.Color(1,1,1),.5);
+    var ambientlight = new THREE.AmbientLight(new THREE.Color(.5,.5,.5), .5 );
     scene.add(ambientlight);
 
-    var cameralight = new THREE.PointLight( new THREE.Color(1,1,1), .8 );
-    cameralight.castShadow=true;
-    camera.add(cameralight);
+    var light = new THREE.PointLight(0xffffff, 1);
+    light.position.set(100,0,0);
+    scene.add(light);
+    //var cameralight = new THREE.PointLight( new THREE.Color(1,1,1), .8 );
+    //cameralight.castShadow=true;
+    //camera.add(cameralight);
     scene.add(camera);
 
+    var simplex = new SimplexNoise();
     
+    Ocean = new function(){
+        var geometry = new THREE.IcosahedronGeometry(1, 5);
+        var waterMat = new THREE.MeshStandardMaterial({
+           flatShading: true,
+           color: new THREE.Color(0.2,0.2,1.0),
+           transparent: true,
+           opacity: 0.7,
+           roughness: 0.4 
+        });
+        var ocean = new THREE.Mesh(geometry, waterMat);
+        ocean.castShadow = true;
+        ocean.receiveShadow = true;
+
+        ocean.animate = function(){
+            for (var i = 0; i < geometry.vertices.length; i++)
+            {
+                var vert_pos_x = geometry.vertices[i].x;
+                var vert_pos_y = geometry.vertices[i].y;
+                var vert_pos_z = geometry.vertices[i].z;
+                var dir = new THREE.Vector3(0,0,0);
+
+                //Get the direction of the vertex
+                dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
+                var step = time * 0.015
+                var vert_noise = simplex.noise3D(
+                    (vert_pos_x + step) / 1,
+                    (vert_pos_y + step) / 1,
+                    (vert_pos_z + step) / 1
+                );
+                geometry.vertices[i].setLength(1 + vert_noise * 0.015);
+            }
+            geometry.verticesNeedUpdate = true;
+        }
+
+        return ocean;
+    }
+
+
     // THIS IS THAT PART YOU SHOULD COPY
     var water_materials = [];
     function generatePlanet(terrainColor){
         var terrain_mat = new THREE.MeshStandardMaterial();
 
         terrain_mat.color = terrainColor;
-        terrain_mat.roughness=.8;
+        terrain_mat.roughness = 0.7;
 
         terrain_mat.wireframe=false;
         terrain_mat.flatShading = true;
 
-        var water_mat = new THREE.ShaderMaterial({
-            uniforms: {
-                time:{
-                    type: "f",
-                    value: 0.0
-                },
-                lightPosition: {
-                    type: 'vec3',
-                    value: new THREE.Vector3(0.0, 0.0, 0.0)
-                },
-				lights: true,
-				ambient: true
-            }
-        });
-        // var water_noise_texture = new THREE.TextureLoader().load('noise.png');
-        // var water_mat = new THREE.MeshStandardMaterial();
-        // water_mat.color=  new THREE.Color(.25,.25,1);
-        // water_mat.roughness=.6;
-        // water_mat.wireframe=false;
-        // water_mat.flatShading = true;
-        // water_mat.displacementMap = water_noise_texture;
-        // water_mat.displacementScale = 1;
-		var uniforms = THREE.UniformsUtils.merge( [
-			THREE.UniformsLib[ "ambient" ],
-			THREE.UniformsLib[ "lights" ]
-		] );
-        water_mat.vertexShader = document.getElementById('vertexShaderSpecularLight').textContent;
-        water_mat.fragmentShader = document.getElementById('fragmentInterpColor').textContent;
-        water_materials.push(water_mat);
-
         //Create the base terrain
         var planet_geometry = new THREE.IcosahedronGeometry(1, 3);
-        var water_geometry = new THREE.IcosahedronGeometry(1, 3);
-
 
         var highest_point = 0;
         var lowest_point = 0;
@@ -276,7 +296,6 @@
         var low_color = new THREE.Color(0,0.8,0);
 
         //Create the noise, then loop through all the vertices
-        var simplex = new SimplexNoise();
         for (var i = 0; i < planet_geometry.vertices.length; i++)
         {
             var vert_pos_x = planet_geometry.vertices[i].x;
@@ -306,9 +325,9 @@
         }
 
         var planet_terrain = new THREE.Mesh(planet_geometry, terrain_mat);	
-        var water = new THREE.Mesh(water_geometry, water_mat);
-
+        var water = Ocean;
         var arr = [planet_terrain, water];
+        time = 0;
         return arr;
     }
 
@@ -318,25 +337,22 @@
     var planet = generatePlanet(new THREE.Color(.2,1,.2));
 
     for(i = 0; i < planet.length; i++){
-        scene.add(planet[i]);
+        planet[i].scale.set(5,5,5);
         if (i > 0){
             planet[i].parent = planet[0];
         }
+        scene.add(planet[i]);
     }
-
-    planet[0].scale.set = THREE.Vector3(5,5,5,);
 
     function animate(){
         requestAnimationFrame(animate);
-        
+
+        time += 1 / 10;
+
         control.update();
         renderer.render(scene, camera);  
-
-        for(i = 0; i < water_materials.length; i++){
-            // water_materials[i].displacementMap.offset = new THREE.Vector2(1+1,0);
-            water_materials[i].uniforms[ 'time' ].value = .00025 * (Date.now() - start) * 0.5;
-            water_materials[i].uniforms[ 'lightPosition' ].value = new THREE.Vector3(0,0,15);
-        }
+        planet[1].animate();
+        
     }
 
     requestAnimationFrame(animate);
