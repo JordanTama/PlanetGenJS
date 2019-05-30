@@ -55,10 +55,10 @@ var genPlanetSystem = function(numBodies) {
 }
 
 var genBody = function(size, color, emission, water) {
+    var body = new THREE.Group();
     if(emission == 0x000000){
-        var body = genPlanet(size, water, color);
+        body = genPlanet(size, water, color);
     } else {
-        var body = new THREE.Group();
         body.add(
             new THREE.Mesh(
                 new THREE.SphereGeometry(size, 32, 32),
@@ -71,6 +71,9 @@ var genBody = function(size, color, emission, water) {
         );
     }
     body.children[0].geometry.computeBoundingSphere();
+    body.children[0].geometry.boundingSphere.radius = size;
+
+    console.log(body.children[0].geometry.boundingSphere.radius);
 
     return body;
 }
