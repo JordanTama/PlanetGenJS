@@ -1,7 +1,6 @@
 var simplex = new SimplexNoise();
     
 var genOcean = function(){
-	delta = 0;
 	var geometry = new THREE.IcosahedronGeometry(1, 5);
 	var waterMat = new THREE.MeshStandardMaterial({
 	   flatShading: true,
@@ -13,19 +12,21 @@ var genOcean = function(){
 	var ocean = new THREE.Mesh(geometry, waterMat);
 	ocean.castShadow = true;
 	ocean.receiveShadow = true;
+	ocean.frustrumCulled = false;
 
-	ocean.animate = function(){
+	ocean.animate = function(tick){
+
 		for (var i = 0; i < geometry.vertices.length; i++)
 		{
 			var vert_pos_x = geometry.vertices[i].x * 5;
 			var vert_pos_y = geometry.vertices[i].y * 5;
 			var vert_pos_z = geometry.vertices[i].z * 5;
 			var dir = new THREE.Vector3(0,0,0);
-
+	
 			//Get the direction of the vertex
 			dir.sub(new THREE.Vector3(vert_pos_x, vert_pos_y, vert_pos_z));
 
-			var step = delta * 0.025
+			var step = tick * 0.001;
 			var vert_noise = simplex.noise3D(
 				(vert_pos_x + step) * 1,
 				(vert_pos_y + step) * 1,
@@ -92,8 +93,8 @@ function genPlanet(size, water, color){
 		ocean.scale.set(size, size, size);
 		group.add(ocean);
 
-		group.animate = function(){
-			ocean.animate();
+		group.animate = function(tick){
+			ocean.animate(tick);
 		}
 		timer = 0;
 	}

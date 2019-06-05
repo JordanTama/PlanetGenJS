@@ -73,7 +73,7 @@ var genBody = function(size, color, emission, water) {
     body.children[0].geometry.computeBoundingSphere();
     body.children[0].geometry.boundingSphere.radius = size;
 
-    console.log(body.children[0].geometry.boundingSphere.radius);
+    // console.log(body.children[0].geometry.boundingSphere.radius);
 
     return body;
 }
@@ -230,21 +230,31 @@ var Resize = function() {
     renderer.render(scene,camera);
 }
 
+var time = 0;
 var Update = function() {
     requestAnimationFrame(Update);
     var delta = clock.getDelta();
     if (!paused) time += delta * timeScale;
     orbit(solarSystem);
+	time += 1 * 0.1; 
     for (let i = 1; i < solarSystem.children.length; i++) {
         for (let x = 0; x < solarSystem.children[i].children.length; x++) {
             var planetGroup = solarSystem.children[i].children[x];
             if (typeof planetGroup.animate == "function"){
-                planetGroup.animate();
+                planetGroup.animate(time);
             }
         }
         orbit(solarSystem.children[i]);
     }
     spin();
+
+    cameraFollow();
+
     controls.update();
+
+
+
+    rayCast();
+
     renderer.render(scene, camera);
 }

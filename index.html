@@ -13,16 +13,25 @@
         <script src = "js/three.js"></script>
         <script src = "js/OrbitControls.js"></script>
         <script src = "js/functions.js"></script>
+
         <script src = "js/simplex-noise.js"></script>
         <script src = "js/PlanetGen.js"></script>
+
+        <script src="js/dat.gui.min.js"></script>
+        <script src="js/guiBuilder.js"></script>
+        <script src="js/planetSelection.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.2/TweenMax.min.js"></script>
+        <script src="js/zoom.js"></script>
 
         <script>
             //Setup.
             var scene = new THREE.Scene();
             var ratio = window.innerWidth / window.innerHeight;
             var camera = new THREE.PerspectiveCamera(45, ratio, 0.1, -40000);
-            camera.position.set(0, 1200, 3000);
+            camera.position.set(0, 2000, 7500);
             camera.lookAt(0, 0, 0);
+            var initialCamPos = new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z);
             var renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement );
@@ -40,11 +49,21 @@
             //Add the solar system to the scene.
             scene.add(solarSystem);
 
-            scene.add(genStars(10000, 1000000, 100000));
+            // Create and Add Selection Torus to Scene
+            orbitTorus();
+
+            // Add stars to the scene
+            var starfield = genStars(10000, 1000000, 100000);
+            scene.add(starfield);
 
             //Add lights to the scene.
-            scene.add(new THREE.PointLight(sunColour, 3));
-            scene.add(new THREE.AmbientLight(0xFFFFFF, 0.15));
+            var pointLight = new THREE.PointLight(sunColour, 3);
+            var ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.15)
+
+            scene.add(pointLight);
+            scene.add(ambientLight);
+
+            // console.log(scene.children[1].children);
 
             //var time = (new Date).getTime();
             var time = 0;
@@ -54,7 +73,13 @@
 
             window.addEventListener('resize', Resize, true);
             document.addEventListener('keydown', onKeyDown, false);
+
+            window.addEventListener('mousemove',onMouseMove,false);
+            document.addEventListener('mousedown',onDocumentMouseDown,false);
+
             requestAnimationFrame(Update);
+
+            buildGui();
         </script>
     </body>
 </html>
