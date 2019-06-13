@@ -209,6 +209,9 @@ var onKeyDown = function(event) {
         case 32:
             paused ^= true;
             break;
+        case 13:
+            zoomOut();
+            break;
     }
     if (timeScale > timeScaleRange) { timeScale = timeScaleRange; }
     if (timeScale < -timeScaleRange) { timeScale = -timeScaleRange; }
