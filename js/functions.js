@@ -6,6 +6,7 @@ var genSolarSystem = function(numPlanets, colour) {
     numOfPlanets = numPlanets
 
     var sun = new THREE.Group();
+    sun.name = "Sun";
     sun.add(genBody(THREE.Math.randFloat(200, 500), colour, colour));
     solarSystem.add(
         sun
@@ -59,16 +60,8 @@ var genBody = function(size, color, emission, water) {
     if(emission == 0x000000){
         body = genPlanet(size, water, color);
     } else {
-        body.add(
-            new THREE.Mesh(
-                new THREE.SphereGeometry(size, 32, 32),
-                new THREE.MeshLambertMaterial({
-                    color: color,
-                    wireframe: false,
-                    emissive: emission
-                })
-            )
-        );
+        body.add(generateSun(size));
+        body.name = "Sun Body";
     }
     body.children[0].geometry.computeBoundingSphere();
     body.children[0].geometry.boundingSphere.radius = size;
@@ -230,13 +223,14 @@ var Resize = function() {
     renderer.render(scene,camera);
 }
 
-var time = 0;
 var Update = function() {
     requestAnimationFrame(Update);
     var delta = clock.getDelta();
     if (!paused) time += delta * timeScale;
     orbit(solarSystem);
-	time += 1 * 0.1; 
+
+    time += 1 * 0.1; 
+    
     for (let i = 1; i < solarSystem.children.length; i++) {
         for (let x = 0; x < solarSystem.children[i].children.length; x++) {
             var planetGroup = solarSystem.children[i].children[x];
@@ -246,6 +240,7 @@ var Update = function() {
         }
         orbit(solarSystem.children[i]);
     }
+    solarSystem.children[0].children[0].children[0].animate(delta * timeScale);
     spin();
 
     cameraFollow();
@@ -257,4 +252,5 @@ var Update = function() {
     rayCast();
 
     renderer.render(scene, camera);
+    //composer.render();
 }

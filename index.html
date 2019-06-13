@@ -6,6 +6,37 @@
     <style>
         body {margin: 0;}
         canvas {width: 100%; height: 100%;}
+
+        #info {
+            position: absolute;
+            top: 0;
+            width: 350px;
+            color: #ffffff;
+            padding: 15px;
+            font-family: Monospace, serif;
+            font-size: 13px;
+            text-align: left;
+            z-index: 1;
+        }
+
+        #planetDesc {
+            position: absolute;
+            top: 10%;
+            left: 40%;
+            /*width: 350px;*/
+            color: #00ff00;
+            padding: 0px;
+            font-family: Monospace, serif;
+            font-size: 22px;
+            text-align: left;
+            z-index: 1;
+        }
+
+        #name{}
+
+        h2 {
+            text-shadow: 0 0 5px white;
+        }
     </style>
 
     <body>
@@ -16,6 +47,7 @@
 
         <script src = "js/simplex-noise.js"></script>
         <script src = "js/PlanetGen.js"></script>
+		<script src = "js/sun.js"></script>
 
         <script src="js/dat.gui.min.js"></script>
         <script src="js/guiBuilder.js"></script>
@@ -23,9 +55,29 @@
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.2/TweenMax.min.js"></script>
         <script src="js/zoom.js"></script>
+        <script src="js/textLoader.js"></script>
+
+        <div id="info">
+        <h2>Solar System</h2>
+        - Click Drag: Rotate Camera <br/>
+        - Click Torus: Select Planet<br/>
+        - Enter: Zoom Out<br/>
+        - W/S: Increase/Decrease Timescale<br/>
+        - Space: Pause/Unpause Timescale<br/>
+        Made by Oleh, Dale, Jordan, and Edward.
+        </div>
+
+        <div id = "planetDesc">
+            <p id = "name"></p>
+            <p id = "size"></p>
+            <p id = "mass"></p>
+            <p id = "temp"></p>
+        </div>
 
         <script>
             //Setup.
+            clearText();
+            
             var scene = new THREE.Scene();
             var ratio = window.innerWidth / window.innerHeight;
             var camera = new THREE.PerspectiveCamera(45, ratio, 0.1, -40000);
@@ -34,10 +86,12 @@
             var initialCamPos = new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z);
             var renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.antialias = true;
             document.body.appendChild(renderer.domElement );
 
             var clock = new THREE.Clock();
             controls = new THREE.OrbitControls(camera, renderer.domElement);
+            // controls.maxDistance = 25000;
 
             //Create the solar system group.
             var sunColour = lerpColours([new THREE.Color(1, 0, 0), new THREE.Color(1, 1, 0), new THREE.Color(1, 1, 1), new THREE.Color(0, 0, 1)]);
@@ -63,7 +117,10 @@
             scene.add(pointLight);
             scene.add(ambientLight);
 
-            // console.log(scene.children[1].children);
+            // Set up arrays to display text for each planet
+            makeArray();
+            setText(0);
+            
 
             //var time = (new Date).getTime();
             var time = 0;

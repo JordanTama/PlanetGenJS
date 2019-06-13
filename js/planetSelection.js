@@ -2,36 +2,32 @@ var raycaster = new THREE.Raycaster();
 var hoverObject;
 var selectedBody;
 var isBodySelected = false;
+var selectedInt = 0;
 
 var mouse = new THREE.Vector2();
 
 function orbitPath(r) {
-
-    // MATERIAL
+// make a line to represent the orbit path of each planet
     var lineMaterial = new THREE.LineBasicMaterial({
-        // color: 0x333333,
         color: 0x777777,
     });
 
-    // GEOMETRY
     var lineGeometry = new THREE.CircleGeometry(r, 128);
     lineGeometry.vertices.shift();
     lineGeometry.computeBoundingSphere();
 
-    // OBJECT
     var line = new THREE.LineLoop(lineGeometry, lineMaterial);
     line.rotation.x = Math.PI / 2;
 
     return line;
-
 }
 
 var torusGroup = new THREE.Group();
 torusGroup.name = "RaycastRings";
 
 function orbitTorus(){
+    // make a torus for each planet's orbital path and add it to the torus group
     for(var i =1; i<solarSystem.children.length;i++){
-        // var r2 = paths[i].geometry.boundingSphere.radius;
         var r2 = solarSystem.children[i].position.distanceTo(solarSystem.children[0].position);
         var r1 = 0;
         if(i>1){
@@ -58,11 +54,15 @@ function orbitTorus(){
 }
 
 function onMouseMove(event){
+    // keep track of mouse position in window
     mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 }
 
 function rayCast(){
+    // cast a ray from the camera in the direciton of the mouse position each frame
+    // if it hit a torus, make it opaque and consider it being hovered over
+    // if moving away from a torus, make it transparent
     raycaster.setFromCamera(mouse,camera);
     var intersect = raycaster.intersectObjects(scene.children[1].children, true);
     if(intersect.length>0){
@@ -81,28 +81,16 @@ function rayCast(){
 }
 
 function onDocumentMouseDown(event){
-    if(hoverObject){
+    // if a torus is being hovered over and the mouse is clicked,
+    // find the index of the selected torus in the group
+    // and select the corresponding planet to zoom towards
+    if(hoverObject&&!isBodySelected){
         for(var i=0;i<torusGroup.children.length;i++){
             if(torusGroup.children[i].children[0]==hoverObject){
-                if(isBodySelected){
-                    // selectedBody.children[0].children[0].material.emissive.setHex(0x000000);
-                }
+                selectedInt = i+1;
                 selectedBody = solarSystem.children[1+i];
-                isBodySelected = true;
-                // selectedBody.children[0].children[0].material.emissive.setHex(0xFFFFFF);
                 zoom();
-                // console.log(selectedBody.children[0].children[0].geometry.boundingSphere.radius);
             }
         }
-    }
-    else{
-        if(selectedBody){
-           // selectedBody.children[0].children[0].material.emissive.setHex(0x000000);
-        }
-        selectedBody = null;
-        isBodySelected = false;
-
-        zoomOut();
-
     }
 }

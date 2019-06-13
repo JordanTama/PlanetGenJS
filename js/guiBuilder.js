@@ -1,7 +1,7 @@
 function buildGui() {
     gui = new dat.GUI();
     var params = {
-    Sun_Color: solarSystem.children[0].children[0].children[0].material.color.getHex(),
+    Sun_Color: pointLight.color.getHex(),
     Sun_Pointlight_Intensity: pointLight.intensity,
     Sun_AmbientLight_Intensity: ambientLight.intensity,
     Sun_AmbientLight_Color: ambientLight.color.getHex(),
@@ -17,10 +17,8 @@ function buildGui() {
     var planetsGUI = gui.addFolder('Planets');
 
     sunGUI.addColor( params, 'Sun_Color' ).onChange( function ( val ) {
-        solarSystem.children[0].children[0].children[0].material.color.setHex(val);
-        solarSystem.children[0].children[0].children[0].material.emissive.setHex(val);
         pointLight.color.setHex( val );
-        } );
+    } );
 
     sunGUI.add( params, 'Sun_Pointlight_Intensity',  { Off: 0, Dim: 1, Default: 3, Bright: 10 }).onChange( function ( val ) {
       pointLight.intensity = val;
