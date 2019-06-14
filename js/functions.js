@@ -1,17 +1,20 @@
 var numOfPlanets;
 var currentNumOfPlanets;
 
+//Return a populated Solar System group.
 var genSolarSystem = function(numPlanets, colour) {
     var solarSystem = new THREE.Group();
     numOfPlanets = numPlanets
-
+    
+    //Add the Sun.
     var sun = new THREE.Group();
     sun.name = "Sun";
     sun.add(genBody(THREE.Math.randFloat(200, 500), colour, colour));
     solarSystem.add(
         sun
     );
-
+    
+    //Add the planets.
     while (solarSystem.children.length < numPlanets + 1) {
         solarSystem.add(genPlanetSystem(1 + THREE.Math.randInt(0, 3)));
         currentNumOfPlanets = solarSystem.children.length;
@@ -20,13 +23,15 @@ var genSolarSystem = function(numPlanets, colour) {
     return solarSystem;
 }
 
+//Return a populated Planet System group.
 var genPlanetSystem = function(numBodies) {
     var planetSystem = new THREE.Group();
 
     var minPlanetSize = 20;
     var maxPlanetSize = 100;
     var planetSize = THREE.Math.randFloat(20, 100);
-
+    
+    //Add a planet, the middle planet is Earth-like.
     if(currentNumOfPlanets == Math.floor(numOfPlanets / 2)) {
         planetSystem.add(
             genBody(planetSize, 0x44ff44, 0x000000, true)
@@ -40,12 +45,15 @@ var genPlanetSystem = function(numBodies) {
 
     var minMoonSize = planetSystem.children[0].children[0].geometry.boundingSphere.radius / 20;
     var maxMoonSize = planetSystem.children[0].children[0].geometry.boundingSphere.radius / 5;
-
+    
+    //Add moons to the planet.
     while (planetSystem.children.length < numBodies) {
         planetSystem.add(
             genBody(THREE.Math.randFloat(minMoonSize, maxMoonSize), randColor(), false)
         );
     }
+    
+    //If there are no moons, add a ring.
     if (numBodies == 1) {
         var r1 = THREE.Math.randFloat(planetSize * 2, planetSize * 6);
         var r2 = THREE.Math.randFloat(planetSize * 2, planetSize * 6);
@@ -55,6 +63,7 @@ var genPlanetSystem = function(numBodies) {
     return planetSystem;
 }
 
+//Return a populated Body group.
 var genBody = function(size, color, emission, water) {
     var body = new THREE.Group();
     if(emission == 0x000000){
@@ -65,14 +74,12 @@ var genBody = function(size, color, emission, water) {
     }
     body.children[0].geometry.computeBoundingSphere();
     body.children[0].geometry.boundingSphere.radius = size;
-
-    // console.log(body.children[0].geometry.boundingSphere.radius);
-
+    
     return body;
 }
 
+//Return a populated Ring group, similar to a Body group.
 var genRing = function(particleCount, particleRange, exclusionRange) {
-    // MATERIAL
     var ring = new THREE.Group();
 
     var ringMaterial = new THREE.PointsMaterial({
@@ -80,7 +87,6 @@ var genRing = function(particleCount, particleRange, exclusionRange) {
         size: 5
     });
 
-    // GEOMETRY
     var ringGeometry = new THREE.Geometry();
     for (var p = 0; p < particleCount; p++) {
         var pos = new THREE.Vector3(0, 0, 0);
@@ -92,21 +98,20 @@ var genRing = function(particleCount, particleRange, exclusionRange) {
         ringGeometry.vertices.push(pos);
     }
 
-    // OBJECT
     ring.add(new THREE.Points(ringGeometry, ringMaterial));
     ring.children[0].geometry.computeBoundingSphere();
 
     return ring;
 }
 
+//Return a Points mesh for the starfield.
 var genStars = function(particleCount, particleRange, exclusionRange) {
-    // MATERIAL
     var starfieldMaterial = new THREE.PointsMaterial({
         color: 0xFFFFFF,
         size: 5
     });
-
-    // GEOMETRY
+    
+    //Randomize the position of each vertex in three dimensions.
     var starfieldGeometry = new THREE.Geometry();
     for (var p = 0; p < particleCount; p++) {
         var pos = new THREE.Vector3(0, 0, 0);
@@ -118,38 +123,52 @@ var genStars = function(particleCount, particleRange, exclusionRange) {
         starfieldGeometry.vertices.push(pos);
     }
 
-    // OBJECT
     var starfield = new THREE.Points(starfieldGeometry, starfieldMaterial);
 
     return starfield;
 }
 
+//This function moves the positions of all of the groups.
 var positionBodies = function() {
+    //Minimum and maximum shift values.
     var minBodyShift = 10;
     var maxBodyShift = 100;
     var minSystemShift = 100;
     var maxSystemShift = 1000;
-
+    
+    //Iterate through each Planet System.
     for (let i = 1; i < solarSystem.children.length; i++) {
-        //Space out the bodies.
+        //Iterate through each body in the planet system and space them out.
+        
         for (let j = 1; j < solarSystem.children[i].children.length; j++) {
+            //Translate it to the position of the previous body.
             solarSystem.children[i].children[j].position.x += solarSystem.children[i].children[j - 1].position.x;
+            //Translate it by the radius of the previous body. 
             solarSystem.children[i].children[j].position.x += solarSystem.children[i].children[j - 1].children[0].geometry.boundingSphere.radius;
+            //Translate it by the radius of itself.
             solarSystem.children[i].children[j].position.x += solarSystem.children[i].children[j].children[0].geometry.boundingSphere.radius;
+            //Translate it a random distance further.
             solarSystem.children[i].children[j].position.x += THREE.Math.randFloat(minBodyShift, maxBodyShift);
+            //If the body is a ring, return it to the local origin.
             if (solarSystem.children[i].children[j].children[0].isPoints == true) {
-                solarSystem.children[i].children[j].position.x = 0.000001;
+                solarSystem.children[i].children[j].position.x = 0.000001; //Ring would not render at 0, 0, 0, unknown reason.
             }
         }
 
-        //Space out the planet systems.
+        //Space out each planet system.
+        
+        //Translate it by the position of the previous Planet System.
         solarSystem.children[i].position.x += solarSystem.children[i - 1].position.x;
+        //Translate it by the radius of the previous Planet System.
         solarSystem.children[i].position.x += solarSystem.children[i - 1].children[solarSystem.children[i - 1].children.length - 1].position.x + solarSystem.children[i - 1].children[solarSystem.children[i - 1].children.length - 1].children[0].geometry.boundingSphere.radius;
+        //Translate it by the radius of itself.
         solarSystem.children[i].position.x += solarSystem.children[i].children[solarSystem.children[i].children.length - 1].position.x + solarSystem.children[i].children[solarSystem.children[i].children.length - 1].children[0].geometry.boundingSphere.radius;
+        //Move it a random distance further.
         solarSystem.children[i].position.x += THREE.Math.randFloat(minSystemShift, maxSystemShift);
     }
 }
 
+//Rotates the children of parentGroup around the respective local origin.
 var orbit = function(parentGroup) {
     for (let i = 1; i < parentGroup.children.length; i++) {
         var radius = parentGroup.children[i].position.distanceTo(new THREE.Vector3(0, 0, 0));
@@ -161,6 +180,7 @@ var orbit = function(parentGroup) {
     }
 }
 
+//Spin each Body group on its own axis as a function of its radius. 
 var spin = function() {
     for (let i = 1; i < solarSystem.children.length; i++) {
         for (let j = 0; j < solarSystem.children[i].children.length; j++) {
@@ -169,6 +189,7 @@ var spin = function() {
     }
 }
 
+//Return a random colour.
 var randColor = function() {
     return new THREE.Color(
         Math.random(),
@@ -177,6 +198,7 @@ var randColor = function() {
     );
 }
 
+//Return a random colour interpolated between two colours.
 var lerpColour = function(a, b, t) {
     console.log(a.r + ", " + a.g + ", " + a.b + " : " + b.r + ", " + b.g + ", " + b.b + " : " + t);
     return new THREE.Color(
@@ -187,6 +209,7 @@ var lerpColour = function(a, b, t) {
     );
 }
 
+//Return a random colour interpolated between two adjacent colours in an array.
 var lerpColours = function(colours) {
     var t = THREE.Math.randFloat(0, colours.length - 1);
     var i = t;
@@ -197,6 +220,7 @@ var lerpColours = function(colours) {
 
 }
 
+//Keyboard controls that manage the time scale.
 var onKeyDown = function(event) {
     var step = timeScaleRange / 100;
     switch(event.keyCode) {
@@ -217,6 +241,7 @@ var onKeyDown = function(event) {
     if (timeScale < -timeScaleRange) { timeScale = -timeScaleRange; }
 }
 
+//Basic resize function.
 var Resize = function() {
     var width = window.innerWidth;
     var height = window.innerHeight;
